@@ -1,0 +1,30 @@
+{
+  "private": true,
+  "name": "vue-study",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node scripts/dev.js reactivity -f esm"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.24.2",
+    "minimist": "^1.2.8",
+    "typescript": "^5.7.3",
+    "vue": "^3.5.13"
+  },
+  "json-comments": {
+    "tips": "请安装JSONComments插件为JSON文件提供注释功能, 详见: https://github.com/zhangfisher/json_comments_extension",
+    "packages/reactivity/package.json": {
+      "name": "作用域包"
+    },
+    "package.json": {
+      "type": "node环境下在文件中可以使用esmodule，但是不能使用__dirname、__filename"
+    }
+  }
+}

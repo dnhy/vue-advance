@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { reactive, effect } from "./reactivity.js";
+      const foo = {
+        bar: 134,
+      };
+      const p = reactive(foo);
+      const p2 = reactive(foo);
+
+      console.log(p);
+      const p3 = reactive(p);
+      console.log(p3 === p);
+
+      effect(() => {
+        root.innerHTML = p.bar;
+      });
+    </script>
+  </body>
+</html>
