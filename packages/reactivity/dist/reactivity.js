@@ -1,4 +1,5 @@
 // packages/reactivity/src/effect.ts
+var activeEffect = void 0;
 var ReactiveEffect = class {
   constructor(fn) {
     this.fn = fn;
@@ -16,11 +17,9 @@ var ReactiveEffect = class {
     }
   }
 };
-var activeEffect = void 0;
 function effect(fn) {
   const reactiveEffect = new ReactiveEffect(fn);
   reactiveEffect.run();
-  activeEffect = reactiveEffect;
 }
 
 // packages/shared/src/index.ts
@@ -42,8 +41,12 @@ var mutableHanlders = {
     return result;
   },
   set(target, key, value, receiver) {
-    Reflect.set(target, key, value);
-    return true;
+    const oldValue = target[key];
+    const flag = Reflect.set(target, key, value);
+    if (value !== oldValue) {
+      trigger(target, key);
+    }
+    return flag;
   }
 };
 var targetMap = /* @__PURE__ */ new WeakMap();
@@ -66,6 +69,15 @@ function trackEffects(dep) {
     dep.add(activeEffect);
     activeEffect.deps.push(dep);
   }
+}
+function trigger(target, key) {
+  let keyMap = targetMap.get(target);
+  if (!keyMap) return;
+  let dep = keyMap.get(key);
+  dep.forEach((effect2) => {
+    if (effect2 === activeEffect) return;
+    effect2.run();
+  });
 }
 
 // packages/reactivity/src/reactive.ts

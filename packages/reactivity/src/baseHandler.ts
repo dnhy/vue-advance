@@ -20,8 +20,13 @@ export const mutableHanlders = {
     return result;
   },
   set(target, key, value, receiver) {
-    Reflect.set(target, key, value);
-    return true;
+    const oldValue = target[key];
+    const flag = Reflect.set(target, key, value);
+
+    if (value !== oldValue) {
+      trigger(target, key);
+    }
+    return flag;
   },
 };
 
@@ -35,7 +40,7 @@ function track(target, key) {
       targetMap.set(target, (keyMap = new Map()));
     }
 
-    let dep = keyMap.get(key);
+    let dep = keyMap.get(key); //dep是一个set
     if (!dep) {
       keyMap.set(key, (dep = new Set()));
     }
@@ -48,6 +53,18 @@ function trackEffects(dep) {
   const shouldTrack = !dep.has(activeEffect);
   if (shouldTrack) {
     dep.add(activeEffect);
+    // effect的deps数组收集set，其实就是effect反向收集key
     activeEffect.deps.push(dep);
   }
+}
+
+export function trigger(target, key) {
+  let keyMap = targetMap.get(target);
+  if (!keyMap) return; //effect里还未访问直接赋值，会直接触发getter
+  let dep = keyMap.get(key);
+
+  dep.forEach((effect) => {
+    if (effect === activeEffect) return;
+    effect.run();
+  });
 }

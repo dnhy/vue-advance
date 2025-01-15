@@ -1,3 +1,13 @@
+export let activeEffect = undefined;
+
+function cleanAllTracks(effect) {
+  const sets = effect.deps;
+  for (let i = 0; i < sets.length; i++) {
+    sets[i].delete(effect);
+  }
+  effect.deps.length = 0;
+}
+
 export class ReactiveEffect {
   parent = null;
   deps = [];
@@ -6,18 +16,17 @@ export class ReactiveEffect {
     try {
       this.parent = activeEffect;
       activeEffect = this;
+      // cleanAllTracks(this);
+
       return this.fn();
     } finally {
       activeEffect = this.parent;
-      this.parent = void 0;
+      this.parent = undefined;
     }
   }
 }
 
-export let activeEffect = void 0;
-
 export function effect(fn: () => void) {
   const reactiveEffect = new ReactiveEffect(fn);
   reactiveEffect.run();
-  activeEffect = reactiveEffect;
 }

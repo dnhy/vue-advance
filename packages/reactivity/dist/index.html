@@ -7,21 +7,27 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="app"></div>
     <script type="module">
       import { reactive, effect } from "./reactivity.js";
-      const foo = {
-        bar: 134,
-      };
-      const p = reactive(foo);
-      const p2 = reactive(foo);
-
-      console.log(p);
-      const p3 = reactive(p);
-      console.log(p3 === p);
+      const foo = reactive({
+        flag: true,
+        name: "Tom",
+        age: 12,
+      });
 
       effect(() => {
-        root.innerHTML = p.bar;
+        // foo.age = Math.random();
+        // root.innerHTML = foo.age;
+
+        console.log(foo.name);
+        root.innerHTML = foo.flag ? foo.name : foo.age;
       });
+
+      setTimeout(() => {
+        foo.flag = false;
+        foo.name = "jerry";
+      }, 1000);
     </script>
   </body>
 </html>
