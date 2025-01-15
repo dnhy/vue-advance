@@ -61,10 +61,15 @@ function trackEffects(dep) {
 export function trigger(target, key) {
   let keyMap = targetMap.get(target);
   if (!keyMap) return; //effect里还未访问直接赋值，会直接触发getter
-  let dep = keyMap.get(key);
+  let effects = keyMap.get(key);
 
-  dep.forEach((effect) => {
-    if (effect === activeEffect) return;
-    effect.run();
-  });
+  //对set进行遍历，由于run中每次属性都会删除所有依赖，并重新收集，这样每次执行都会加入新的依赖到set，会导致死循环
+  // 将set转换成数组
+  if (effects) {
+    effects = [...effects];
+    effects.forEach((effect) => {
+      if (effect === activeEffect) return;
+      effect.run();
+    });
+  }
 }

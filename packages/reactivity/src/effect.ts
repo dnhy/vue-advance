@@ -16,7 +16,7 @@ export class ReactiveEffect {
     try {
       this.parent = activeEffect;
       activeEffect = this;
-      // cleanAllTracks(this);
+      cleanAllTracks(this);
 
       return this.fn();
     } finally {

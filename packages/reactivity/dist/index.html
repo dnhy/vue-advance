@@ -20,13 +20,15 @@
         // foo.age = Math.random();
         // root.innerHTML = foo.age;
 
-        console.log(foo.name);
+        console.log("触发");
         root.innerHTML = foo.flag ? foo.name : foo.age;
       });
 
       setTimeout(() => {
         foo.flag = false;
-        foo.name = "jerry";
+        setTimeout(() => {
+          foo.name = "jerry";
+        }, 1000);
       }, 1000);
     </script>
   </body>

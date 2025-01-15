@@ -1,5 +1,12 @@
 // packages/reactivity/src/effect.ts
 var activeEffect = void 0;
+function cleanAllTracks(effect2) {
+  const sets = effect2.deps;
+  for (let i = 0; i < sets.length; i++) {
+    sets[i].delete(effect2);
+  }
+  effect2.deps.length = 0;
+}
 var ReactiveEffect = class {
   constructor(fn) {
     this.fn = fn;
@@ -10,6 +17,7 @@ var ReactiveEffect = class {
     try {
       this.parent = activeEffect;
       activeEffect = this;
+      cleanAllTracks(this);
       return this.fn();
     } finally {
       activeEffect = this.parent;
@@ -73,11 +81,14 @@ function trackEffects(dep) {
 function trigger(target, key) {
   let keyMap = targetMap.get(target);
   if (!keyMap) return;
-  let dep = keyMap.get(key);
-  dep.forEach((effect2) => {
-    if (effect2 === activeEffect) return;
-    effect2.run();
-  });
+  let effects = keyMap.get(key);
+  if (effects) {
+    effects = [...effects];
+    effects.forEach((effect2) => {
+      if (effect2 === activeEffect) return;
+      effect2.run();
+    });
+  }
 }
 
 // packages/reactivity/src/reactive.ts

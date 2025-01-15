@@ -50,3 +50,20 @@ node环境下可以使用esModule，通过配置package.json的type:module。配
     });
  ```
 - 每次执行run都应该清空属性收集的依赖，并重新收集。因为执行run之后部分属性可能不需要收集依赖，对其修改不应该触发effect
+
+```javascript
+    effect(() => {
+    // foo.age = Math.random();
+    // root.innerHTML = foo.age;
+
+        console.log("触发");
+        root.innerHTML = foo.flag ? foo.name : foo.age;
+    });
+
+    setTimeout(() => {
+        foo.flag = false;
+        setTimeout(() => {
+            foo.name = "jerry";
+        }, 1000);
+    }, 1000);
+```
