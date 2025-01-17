@@ -7,10 +7,79 @@
   </head>
   <body>
     <div id="app"></div>
+    <div id="app2"></div>
     <script type="module">
-      import { computed } from "/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js";
-      console.log(computed);
-      const currentURL = window.location.href;
+      // import {
+      //   computed,
+      //   reactive,
+      //   effect,
+      //   watch,
+      // } from "/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js";
+      import { reactive, effect, computed, watch } from "./reactivity.js";
+
+      let obj = reactive({
+        test: "123",
+        num: 4242,
+        f: "tom ",
+        l: "jerry",
+        foo: {
+          bar: 1223,
+        },
+      });
+
+      watch(
+        () => obj,
+        (newValue, oldValue) => {
+          console.log("watch", newValue, oldValue);
+        },
+        {
+          // immediate: true,
+          deep: true,
+        }
+      );
+
+      const allName = computed({
+        get() {
+          console.log("computed");
+          return obj.f + obj.l;
+        },
+        set(val) {
+          obj.l = val;
+        },
+      });
+      setTimeout(() => {
+        // obj.l = "jack22112";
+        obj.test = "qwqwsaa";
+      }, 1000);
+      // setTimeout(() => {
+      //   obj.l = "james3";
+      //   console.log(allName.value);
+      // }, 2000);
+
+      let isFlushing = false;
+      const runner = effect(
+        () => {
+          console.log("!!!!!");
+          app.innerHTML = allName.value + " " + allName.value;
+        },
+        {
+          scheduler() {
+            if (!isFlushing) {
+              Promise.resolve().then(() => {
+                runner();
+                isFlushing = false;
+              });
+            }
+
+            isFlushing = true;
+          },
+        }
+      );
+
+      // effect(() => {
+      //   console.log("!!!!22222");
+      //   app2.innerHTML = allName.value + " " + allName.value;
+      // });
     </script>
   </body>
 </html>

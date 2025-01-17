@@ -20,3 +20,7 @@ function createReactive(target) {
   proxyMaps.set(target, proxy);
   return proxy;
 }
+
+export function isReactive(target) {
+  return !!(target && target[ReactiveFlags.isReactive]);
+}

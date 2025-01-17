@@ -26,7 +26,17 @@ node环境下可以使用esModule，通过配置package.json的type:module。配
 
 - 处理组件effect嵌套导致的activeEffect使用问题
 
-3. effect方法中传一个方法给reactiveEffect并立即调用，访问响应式数据属性，触发getter进行track
+- effect的作用
+(1)创建reactiveEffect(2)调用effect.run
+
+
+3. effect方法中传一个方法给reactiveEffect并在run中立即调用，访问响应式数据属性，触发getter进行track
+
+- run的作用
+
+    (1)将当前reactiveEffect挂到全局
+
+    (2)调用传入的fn访问响应式数据触发依赖收集
 
 4. track依赖收集：使用map关联原始对象target=>dep{key=>set[effect、effect]},set中添加effect时，该effect反向关联dep。使得属性和effect是n:n的关系。
 
@@ -67,3 +77,34 @@ node环境下可以使用esModule，通过配置package.json的type:module。配
         }, 1000);
     }, 1000);
 ```
+
+- 多次执行属性修改，通过异步调用的方式只执行一次
+
+## computed
+
+1. 计算属性对象访问value属性收集渲染effect
+
+2. 计算属性的value属性getter调用run获取结果值，访问内部依赖
+
+3. 内部依赖收集计算属性effect
+
+4. 计算属性的value属性修改调用setter就调用传入的setter方法，触发内部依赖属性变化，属性收集的计算属性effect调用schedule。schedule中手动触发triggerEffects，调用渲染effect访问value值，重新计算新值
+
+5. 使用dirty标识符确定每部依赖是否发生变化，如果为false，直接返回之前计算的值，如果为true，计算之后再返回新的值，并设置为false。
+当依赖发生变化时，设置为true，下次访问value时get内部重新进行计算新值
+
+
+## watch
+默认监听响应式对象第一层的属性（浅层监听,第一层属性进行依赖收集），**如果设置了深层监听，就是对当前监听的对象进行了递归遍历**，这样性能较差。所有监听对象其实都转换成了一个getter函数，调用之后访问响应式数据属性进行依赖收集，收集的是一个新创建的effect，将cb作为sheduler。
+
+**所以看能不能监听本质上看这个属性有没有进行依赖收集**
+
+1. 将监听对象转换成一个getter函数，如果原先是函数不用变，如果原先是响应式对象，修改成一个函数，函数调用后进行对象的遍历并返回原对象。
+
+2. 如果有deep:true,需要getter函数返回的监听对象中的响应式对象或属性进行遍历。
+
+3. 创建一个effect，传入getter，调用effect.run访问响应式数据属性，进行依赖收集并获取oldvalue。
+
+4. 当属性值发生变化，调用schedule即job，job中调用effect.run获取newValue，调用cb并将oldValue和newValue传入
+
+5. 如果有immediate:true,第三步改调用job，获取newValue并进行依赖收集，此时oldValue为undefined。立刻调用一次cb，传入oldValue和newValue。值发生变化时同第四步

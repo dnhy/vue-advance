@@ -1,2 +1,4 @@
-export * from "./effect.js";
-export * from "./reactive.js";
+export * from "./effect";
+export * from "./reactive";
+export * from "./computed";
+export * from "./watch";

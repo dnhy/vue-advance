@@ -1,4 +1,4 @@
-import { isObject } from "../../shared/src/index.js";
+import { isObject } from "@vue/shared";
 import { activeEffect } from "./effect.js";
 import { reactive } from "./reactive.js";
 
@@ -49,7 +49,7 @@ function track(target, key) {
   }
 }
 
-function trackEffects(dep) {
+export function trackEffects(dep) {
   const shouldTrack = !dep.has(activeEffect);
   if (shouldTrack) {
     dep.add(activeEffect);
@@ -62,14 +62,21 @@ export function trigger(target, key) {
   let keyMap = targetMap.get(target);
   if (!keyMap) return; //effect里还未访问直接赋值，会直接触发getter
   let effects = keyMap.get(key);
+  triggerEffects(effects);
+}
 
+export function triggerEffects(effects) {
   //对set进行遍历，由于run中每次属性都会删除所有依赖，并重新收集，这样每次执行都会加入新的依赖到set，会导致死循环
   // 将set转换成数组
   if (effects) {
     effects = [...effects];
     effects.forEach((effect) => {
       if (effect === activeEffect) return;
-      effect.run();
+      if (effect.scheduler) {
+        effect.scheduler();
+      } else {
+        effect.run();
+      }
     });
   }
 }

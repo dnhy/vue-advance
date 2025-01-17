@@ -1,15 +1,16 @@
 // packages/reactivity/src/effect.ts
 var activeEffect = void 0;
-function cleanAllTracks(effect2) {
-  const sets = effect2.deps;
+function cleanAllTracks(effect3) {
+  const sets = effect3.deps;
   for (let i = 0; i < sets.length; i++) {
-    sets[i].delete(effect2);
+    sets[i].delete(effect3);
   }
-  effect2.deps.length = 0;
+  effect3.deps.length = 0;
 }
 var ReactiveEffect = class {
-  constructor(fn) {
+  constructor(fn, scheduler) {
     this.fn = fn;
+    this.scheduler = scheduler;
     this.parent = null;
     this.deps = [];
   }
@@ -25,14 +26,18 @@ var ReactiveEffect = class {
     }
   }
 };
-function effect(fn) {
-  const reactiveEffect = new ReactiveEffect(fn);
+function effect(fn, options) {
+  const reactiveEffect = new ReactiveEffect(fn, options?.scheduler);
   reactiveEffect.run();
+  return reactiveEffect.run.bind(reactiveEffect);
 }
 
 // packages/shared/src/index.ts
 function isObject(val) {
   return typeof val === "object" && val !== null;
+}
+function isFunction(val) {
+  return typeof val === "function";
 }
 
 // packages/reactivity/src/baseHandler.ts
@@ -82,11 +87,18 @@ function trigger(target, key) {
   let keyMap = targetMap.get(target);
   if (!keyMap) return;
   let effects = keyMap.get(key);
+  triggerEffects(effects);
+}
+function triggerEffects(effects) {
   if (effects) {
     effects = [...effects];
-    effects.forEach((effect2) => {
-      if (effect2 === activeEffect) return;
-      effect2.run();
+    effects.forEach((effect3) => {
+      if (effect3 === activeEffect) return;
+      if (effect3.scheduler) {
+        effect3.scheduler();
+      } else {
+        effect3.run();
+      }
     });
   }
 }
@@ -107,10 +119,98 @@ function createReactive(target) {
   proxyMaps.set(target, proxy);
   return proxy;
 }
+function isReactive(target) {
+  return !!(target && target["__v_isReactive" /* isReactive */]);
+}
+
+// packages/reactivity/src/computed.ts
+var ComputedImpl = class {
+  constructor(getter, setter) {
+    this.getter = getter;
+    this.setter = setter;
+    this.deps = /* @__PURE__ */ new Set();
+    this.dirty = true;
+    this.effect = new ReactiveEffect(getter, () => {
+      this.dirty = true;
+      triggerEffects(this.deps);
+    });
+  }
+  get value() {
+    if (activeEffect) {
+      trackEffects(this.deps);
+    }
+    if (this.dirty) {
+      this._value = this.effect.run();
+      this.dirty = false;
+    }
+    return this._value;
+  }
+  set value(newValue) {
+    this.setter(newValue);
+  }
+};
+var computed = (getterOrOptions) => {
+  let isGetter = isFunction(getterOrOptions);
+  let getter;
+  let setter;
+  if (isGetter) {
+    getter = getterOrOptions.get;
+    setter = () => {
+      console.warn("computed is readonly");
+    };
+  } else {
+    getter = getterOrOptions.get;
+    setter = getterOrOptions.set;
+  }
+  return new ComputedImpl(getter, setter);
+};
+
+// packages/reactivity/src/watch.ts
+function reserve(source, seen = /* @__PURE__ */ new Set()) {
+  if (!isObject(source)) {
+    return source;
+  }
+  if (seen.has(source)) {
+    return source;
+  }
+  seen.add(source);
+  for (const key in source) {
+    reserve(source[key], seen);
+  }
+  return source;
+}
+var watch = (source, cb, options) => {
+  let getter;
+  const { deep, immediate } = options;
+  if (isReactive(source)) {
+    getter = () => reserve(source);
+  } else if (isFunction(source)) {
+    getter = source;
+  }
+  if (deep) {
+    const baseGetter = getter;
+    getter = () => reserve(baseGetter());
+  }
+  let oldValue;
+  const job = () => {
+    const newValue = effect3.run();
+    cb(newValue, oldValue);
+    oldValue = newValue;
+  };
+  const effect3 = new ReactiveEffect(getter, job);
+  if (immediate) {
+    job();
+  } else {
+    oldValue = effect3.run();
+  }
+};
 export {
   ReactiveEffect,
   activeEffect,
+  computed,
   effect,
-  reactive
+  isReactive,
+  reactive,
+  watch
 };
 //# sourceMappingURL=reactivity.js.map
