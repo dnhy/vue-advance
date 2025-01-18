@@ -16,6 +16,8 @@ node相关、服务端渲染
 node环境下可以使用esModule，通过配置package.json的type:module。配置之后在文件中不能使用__dirname、__filename。
 
 ## 响应式数据原理
+reactive对传入的对象做代理
+
 1. reactive代理对象，添加getter、setter成为响应式数据
 
 - 处理嵌套代理
@@ -78,9 +80,12 @@ node环境下可以使用esModule，通过配置package.json的type:module。配
     }, 1000);
 ```
 
-- 多次执行属性修改，通过异步调用的方式只执行一次
+- 多次执行属性修改，通过异步调用的方式只执行一次，实现批处理
+effect添加一个配置项scheduler，只执行scheduler不执行runner，在scheduler中异步执行runner保证在同步代码之后执行，这样就只会对最后一次修改结果生效。并通过一个标识符flushing控制，只触发一次runner异步执行。
+
 
 ## computed
+computed内部返回一个ComputedImpl的对象
 
 1. 计算属性对象访问value属性收集渲染effect
 
@@ -97,14 +102,33 @@ node环境下可以使用esModule，通过配置package.json的type:module。配
 ## watch
 默认监听响应式对象第一层的属性（浅层监听,第一层属性进行依赖收集），**如果设置了深层监听，就是对当前监听的对象进行了递归遍历**，这样性能较差。所有监听对象其实都转换成了一个getter函数，调用之后访问响应式数据属性进行依赖收集，收集的是一个新创建的effect，将cb作为sheduler。
 
-**所以看能不能监听本质上看这个属性有没有进行依赖收集**
+**所以看能不能监听本质上看这个目标转化成getter函数，调用getter后有没有访问到响应式对象属性从而进行依赖收集**
 
 1. 将监听对象转换成一个getter函数，如果原先是函数不用变，如果原先是响应式对象，修改成一个函数，函数调用后进行对象的遍历并返回原对象。
 
-2. 如果有deep:true,需要getter函数返回的监听对象中的响应式对象或属性进行遍历。
+2. 如果有deep:true,需要getter函数调用时对返回的监听对象中的响应式对象或属性进行遍历，从而进行依赖收集。
 
 3. 创建一个effect，传入getter，调用effect.run访问响应式数据属性，进行依赖收集并获取oldvalue。
 
 4. 当属性值发生变化，调用schedule即job，job中调用effect.run获取newValue，调用cb并将oldValue和newValue传入
 
 5. 如果有immediate:true,第三步改调用job，获取newValue并进行依赖收集，此时oldValue为undefined。立刻调用一次cb，传入oldValue和newValue。值发生变化时同第四步
+
+- 异步竞态问题
+使用onCleanup清楚上一次的影响
+
+## watcheffect
+getter函数传入一个新建的effect，首次调用进行依赖收集，当内部响应式对象属性发生变化，调用scheduler异步更新。
+
+
+- 注意：watch、watcheffect默认自己实现了一个schedule进行异步执行，实现了批处理，多次数据变化只有最后一次的生效。可以配置flush:async进行同步执行。
+
+
+## ref
+ref内部返回一个RefImpl的响应式对象，value属性保存数据，通过类访问器劫持数据。当访问数据value属性时进行依赖收集，当设置属性时修改value值，触发调用effect.run，访问属性触发getter返回新值。
+
+## toRef
+不是转成RefImpl对象，而是通过一个响应式对象和它的一个属性创建一个ObjectRefImpl
+通过访问它的value值，访问原来的响应式对象的属性。所以这个api是用来创建一个对象，它的value属性关联响应式对象的指定属性。
+访问value就是访问原来的对象的属性，原来对象的属性进行依赖收集。
+value属性变化，触发原来的对象的属性变化，触发effect.run，再次访问原对象属性触发getter获取新值。

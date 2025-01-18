@@ -8,15 +8,77 @@
   <body>
     <div id="app"></div>
     <div id="app2"></div>
+    <div id="app3"></div>
+    <div id="app4"></div>
+
     <script type="module">
       // import {
       //   computed,
       //   reactive,
       //   effect,
+      //   ref,
+      //   toRef,
       //   watch,
       // } from "/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js";
-      import { reactive, effect, computed, watch } from "./reactivity.js";
+      // import {
+      //   computed,
+      //   reactive,
+      //   effect,
+      //   ref,
+      //   toRef,
+      //   watch,
+      //   watchEffect,
+      //   toRefs,
+      // } from "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js";
+      import {
+        reactive,
+        effect,
+        computed,
+        watch,
+        watchEffect,
+        ref,
+        toRef,
+        toRefs,
+      } from "./reactivity.js";
 
+      const name = ref("Tom");
+      const info1 = reactive({ name: "cxk" });
+      const info2 = reactive({ age: 24, skill: "ctrl" });
+      // const info = {
+      //   name: toRef(info1, "name"),
+      //   age: toRef(info2, "age"),
+      //   skill: toRef(info2, "skill"),
+      // };
+      const info = { ...toRefs(info1), ...toRefs(info2) };
+
+      console.log("info", info);
+      effect(() => {
+        app4.innerHTML = info.name.value + " " + info.age.value;
+      });
+      setTimeout(() => {
+        info.age.value = 35;
+      }, 1000);
+
+      effect(() => {
+        console.log("invoke");
+        app3.innerHTML = name.value;
+      });
+      setTimeout(() => {
+        name.value = "jerry";
+      }, 1000);
+
+      const data = {
+        1: { time: 3000, returnVal: "abc" },
+        2: { time: 2000, returnVal: "bcd" },
+      };
+
+      function getData(newVal) {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(data[newVal].returnVal);
+          }, data[newVal].time);
+        });
+      }
       let obj = reactive({
         test: "123",
         num: 4242,
@@ -25,61 +87,47 @@
         foo: {
           bar: 1223,
         },
+        n: 0,
       });
 
+      let arr = []; //不同次数调用的flag都传到这里保存
       watch(
-        () => obj,
-        (newValue, oldValue) => {
-          console.log("watch", newValue, oldValue);
+        () => obj.n,
+        async (newValue, oldValue, onCleanup) => {
+          // if (arr.length > 0) arr.pop()();
+
+          // let flag = true;
+          // arr.push(function () {
+          //   flag = false;
+          // });
+
+          let flag = true;
+          console.log("watch", obj.n);
+
+          // 取消上一次的渲染
+          onCleanup(() => {
+            flag = false;
+          });
+
+          let r = await getData(obj.n);
+          flag && (app.innerHTML = r);
         },
         {
-          // immediate: true,
-          deep: true,
+          flush: "sync",
         }
       );
 
-      const allName = computed({
-        get() {
-          console.log("computed");
-          return obj.f + obj.l;
-        },
-        set(val) {
-          obj.l = val;
-        },
-      });
-      setTimeout(() => {
-        // obj.l = "jack22112";
-        obj.test = "qwqwsaa";
-      }, 1000);
-      // setTimeout(() => {
-      //   obj.l = "james3";
-      //   console.log(allName.value);
-      // }, 2000);
-
-      let isFlushing = false;
-      const runner = effect(
+      watchEffect(
         () => {
-          console.log("!!!!!");
-          app.innerHTML = allName.value + " " + allName.value;
+          app2.innerHTML = obj.n;
+          console.log("watchEffect", obj.n);
         },
         {
-          scheduler() {
-            if (!isFlushing) {
-              Promise.resolve().then(() => {
-                runner();
-                isFlushing = false;
-              });
-            }
-
-            isFlushing = true;
-          },
+          flush: "sync",
         }
       );
-
-      // effect(() => {
-      //   console.log("!!!!22222");
-      //   app2.innerHTML = allName.value + " " + allName.value;
-      // });
+      obj.n++;
+      obj.n++;
     </script>
   </body>
 </html>

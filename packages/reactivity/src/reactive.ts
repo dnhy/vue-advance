@@ -1,3 +1,4 @@
+import { isObject } from "@vue/shared/src/index.js";
 import { mutableHanlders, ReactiveFlags } from "./baseHandler.js";
 
 export function reactive(target) {
@@ -23,4 +24,8 @@ function createReactive(target) {
 
 export function isReactive(target) {
   return !!(target && target[ReactiveFlags.isReactive]);
+}
+
+export function toReactive(target) {
+  return isObject(target) ? reactive(target) : target;
 }

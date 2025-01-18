@@ -20,9 +20,9 @@ function reserve(source, seen = new Set()) {
   return source;
 }
 
-export const watch = (source, cb, options) => {
-  let getter: any;
+function doWatch(source, cb, options: any = Object.freeze({})) {
   const { deep, immediate } = options;
+  let getter: any;
   if (isReactive(source)) {
     getter = () => reserve(source);
   } else if (isFunction(source)) {
@@ -36,10 +36,21 @@ export const watch = (source, cb, options) => {
   }
 
   let oldValue: any;
+  let clean: () => void;
+
+  function onCleanup(fn: () => void) {
+    clean = fn;
+  }
   const job = () => {
-    const newValue = effect.run();
-    cb(newValue, oldValue);
-    oldValue = newValue;
+    if (clean) clean();
+
+    if (cb) {
+      const newValue = effect.run();
+      cb(newValue, oldValue, onCleanup);
+      oldValue = newValue;
+    } else {
+      effect.run();
+    }
   };
 
   const effect = new ReactiveEffect(getter, job);
@@ -48,4 +59,12 @@ export const watch = (source, cb, options) => {
   } else {
     oldValue = effect.run();
   }
+}
+
+export const watchEffect = (source, options) => {
+  doWatch(source, null, options);
+};
+
+export const watch = (source, cb, options) => {
+  doWatch(source, cb, options);
 };
