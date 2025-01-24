@@ -27,6 +27,10 @@ importers:
         specifier: workspace:^
         version: link:../shared
 
+  packages/runtime-core: {}
+
+  packages/runtime-dom: {}
+
   packages/shared: {}
 
 packages:

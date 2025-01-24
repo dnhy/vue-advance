@@ -1,3 +1,41 @@
+// packages/reactivity/src/effectScope.ts
+var activeEffectSope;
+var EffectScope = class {
+  constructor(detached) {
+    this.effects = [];
+    this.scopes = [];
+    if (!detached && activeEffectSope) {
+      activeEffectSope.scopes.push(this);
+    }
+  }
+  run(fn) {
+    try {
+      this.parent = activeEffectSope;
+      activeEffectSope = this;
+      return fn();
+    } finally {
+      activeEffectSope = this.parent;
+      this.parent = void 0;
+    }
+  }
+  stop() {
+    for (let i = 0; i < this.effects.length; i++) {
+      this.effects[i].stop();
+    }
+    for (let i = 0; i < this.scopes.length; i++) {
+      this.scopes[i].stop();
+    }
+  }
+};
+function recordEffectScope(effect3) {
+  if (activeEffectSope) {
+    activeEffectSope.effects.push(effect3);
+  }
+}
+function effectScope(detached = false) {
+  return new EffectScope(detached);
+}
+
 // packages/reactivity/src/effect.ts
 var activeEffect = void 0;
 function cleanAllTracks(effect3) {
@@ -13,8 +51,14 @@ var ReactiveEffect = class {
     this.scheduler = scheduler;
     this.parent = null;
     this.deps = [];
+    this.__v_isRef = true;
+    this.active = true;
+    recordEffectScope(this);
   }
   run() {
+    if (!this.active) {
+      return this.fn();
+    }
     try {
       this.parent = activeEffect;
       activeEffect = this;
@@ -25,11 +69,19 @@ var ReactiveEffect = class {
       this.parent = void 0;
     }
   }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      cleanAllTracks(this);
+    }
+  }
 };
 function effect(fn, options) {
-  const reactiveEffect = new ReactiveEffect(fn, options?.scheduler);
-  reactiveEffect.run();
-  return reactiveEffect.run.bind(reactiveEffect);
+  const _effect = new ReactiveEffect(fn, options?.scheduler);
+  _effect.run();
+  const runner = _effect.run.bind(_effect);
+  runner.effect = _effect;
+  return runner;
 }
 
 // packages/shared/src/index.ts
@@ -127,12 +179,13 @@ function toReactive(target) {
 }
 
 // packages/reactivity/src/computed.ts
-var ComputedImpl = class {
+var ComputedRefImpl = class {
   constructor(getter, setter) {
     this.getter = getter;
     this.setter = setter;
     this.deps = /* @__PURE__ */ new Set();
     this.dirty = true;
+    this.__v_isRef = true;
     this.effect = new ReactiveEffect(getter, () => {
       this.dirty = true;
       triggerEffects(this.deps);
@@ -165,7 +218,7 @@ var computed = (getterOrOptions) => {
     getter = getterOrOptions.get;
     setter = getterOrOptions.set;
   }
-  return new ComputedImpl(getter, setter);
+  return new ComputedRefImpl(getter, setter);
 };
 
 // packages/reactivity/src/watch.ts
@@ -227,6 +280,7 @@ var watch = (source, cb, options) => {
 var RefImpl = class {
   constructor(rawVal) {
     this.rawVal = rawVal;
+    this.__v_isRef = true;
     this.deps = /* @__PURE__ */ new Set();
     this._value = toReactive(rawVal);
   }
@@ -251,6 +305,7 @@ var ObjectRefImpl = class {
   constructor(target, key) {
     this.target = target;
     this.key = key;
+    this.__v_isRef = true;
   }
   get value() {
     return this.target[this.key];
@@ -272,13 +327,32 @@ function toRefs(target) {
   }
   return obj;
 }
+function proxyRefs(target) {
+  return new Proxy(target, {
+    get(t, k, r) {
+      return target[k]["__v_isRef"] ? t[k].value : t[k];
+    },
+    set(t, k, newVal, r) {
+      if (target["__v_isRef"]) {
+        t[k].value = newVal;
+        return true;
+      } else {
+        return Reflect.set(t, k, newVal);
+      }
+    }
+  });
+}
 export {
   ReactiveEffect,
   activeEffect,
+  activeEffectSope,
   computed,
   effect,
+  effectScope,
   isReactive,
+  proxyRefs,
   reactive,
+  recordEffectScope,
   ref,
   toReactive,
   toRef,

@@ -1,3 +1,5 @@
+import { recordEffectScope } from "./effectScope.js";
+
 export let activeEffect = undefined;
 
 function cleanAllTracks(effect) {
@@ -11,8 +13,15 @@ function cleanAllTracks(effect) {
 export class ReactiveEffect {
   parent = null;
   deps = [];
-  constructor(public fn: () => void, public scheduler?: () => void) {}
+  __v_isRef = true;
+  active = true;
+  constructor(public fn: () => void, public scheduler?: () => void) {
+    recordEffectScope(this);
+  }
   run() {
+    if (!this.active) {
+      return this.fn();
+    }
     try {
       this.parent = activeEffect;
       // 将当前的ReactiveEffect挂到全局
@@ -26,12 +35,20 @@ export class ReactiveEffect {
       this.parent = undefined;
     }
   }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      cleanAllTracks(this);
+    }
+  }
 }
 
 export function effect(fn: () => void, options: any) {
   // 渲染effect
-  const reactiveEffect = new ReactiveEffect(fn, options?.scheduler);
-  reactiveEffect.run();
+  const _effect = new ReactiveEffect(fn, options?.scheduler);
+  _effect.run();
 
-  return reactiveEffect.run.bind(reactiveEffect);
+  const runner = _effect.run.bind(_effect);
+  runner.effect = _effect;
+  return runner;
 }

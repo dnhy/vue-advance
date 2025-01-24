@@ -4,6 +4,7 @@ import { isReactive, toReactive } from "./reactive.js";
 
 class RefImpl {
   _value;
+  __v_isRef = true;
   deps = new Set();
   constructor(public rawVal) {
     this._value = toReactive(rawVal);
@@ -30,6 +31,7 @@ export function ref(rawVal) {
 
 class ObjectRefImpl {
   _value;
+  __v_isRef = true;
   constructor(public target, public key) {}
   get value() {
     return this.target[this.key];
@@ -55,6 +57,18 @@ export function toRefs(target) {
   return obj;
 }
 
-export default {
-  testModule: 122121,
-};
+export function proxyRefs(target) {
+  return new Proxy(target, {
+    get(t, k, r) {
+      return target[k]["__v_isRef"] ? t[k].value : t[k];
+    },
+    set(t, k, newVal, r) {
+      if (target["__v_isRef"]) {
+        t[k].value = newVal;
+        return true;
+      } else {
+        return Reflect.set(t, k, newVal);
+      }
+    },
+  });
+}

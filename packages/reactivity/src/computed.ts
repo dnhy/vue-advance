@@ -2,11 +2,12 @@ import { isFunction } from "@vue/shared";
 import { activeEffect, effect, ReactiveEffect } from "./effect.js";
 import { trackEffects, triggerEffects } from "./baseHandler.js";
 
-class ComputedImpl {
+class ComputedRefImpl {
   public _value: any;
   public effect: ReactiveEffect;
   public deps = new Set();
   public dirty = true;
+  __v_isRef = true;
   constructor(public getter: () => void, public setter: (val: any) => void) {
     this.effect = new ReactiveEffect(getter, () => {
       //内部依赖修改之后在下一次访问value时需要重新计算
@@ -49,5 +50,5 @@ export const computed = (getterOrOptions) => {
     setter = getterOrOptions.set;
   }
 
-  return new ComputedImpl(getter, setter);
+  return new ComputedRefImpl(getter, setter);
 };
