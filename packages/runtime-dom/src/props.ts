@@ -1,35 +1,3 @@
-// packages/runtime-dom/src/nodeOps.ts
-var nodeOps = {
-  insert(el, parent, anchor) {
-    return parent.insertBefore(el, anchor || null);
-  },
-  remove(el) {
-    const parent = el.parentNode;
-    if (parent) {
-      parent.removeChild(el);
-    }
-  },
-  createElement(type) {
-    return document.createElement(type);
-  },
-  createText(text) {
-    return document.createTextNode(text);
-  },
-  setText(node, text) {
-    return node.nodeValue = text;
-  },
-  setElementText(node, text) {
-    return node.nodeValue = text;
-  },
-  parentNode(node) {
-    return node.parentNode;
-  },
-  nextSibling(node) {
-    return node.nextSibling;
-  }
-};
-
-// packages/runtime-dom/src/props.ts
 function patchStyle(el, prevValue, nextValue) {
   const style = el["style"];
   if (nextValue) {
@@ -45,6 +13,7 @@ function patchStyle(el, prevValue, nextValue) {
     }
   }
 }
+
 function patchClass(el, nextValue) {
   if (nextValue === null) {
     el.removeAttribute("class");
@@ -57,7 +26,9 @@ function createInvoker(val) {
   invoker.val = val;
   return invoker;
 }
+
 function patchEvent(el, eventName, nextValue) {
+  // 缓存map
   const invokers = el._evi || (el._evi = {});
   const exists = invokers[eventName];
   if (exists && nextValue) {
@@ -74,6 +45,7 @@ function patchEvent(el, eventName, nextValue) {
     }
   }
 }
+
 function patchAttr(el, key, nextValue) {
   if (nextValue === null) {
     el.removeAttribute(key);
@@ -81,7 +53,8 @@ function patchAttr(el, key, nextValue) {
     el.setAttribute(key, nextValue);
   }
 }
-function patchProp(el, key, prevValue, nextValue) {
+
+export function patchProp(el, key, prevValue, nextValue) {
   if (key === "style") {
     return patchStyle(el, prevValue, nextValue);
   } else if (key === "class") {
@@ -92,8 +65,3 @@ function patchProp(el, key, prevValue, nextValue) {
     return patchAttr(el, key, nextValue);
   }
 }
-
-// packages/runtime-dom/src/index.ts
-var renderOptions = { ...nodeOps, patchProp };
-console.log("renderOptions :", renderOptions);
-//# sourceMappingURL=runtime-dom.js.map
