@@ -4,7 +4,6 @@ import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const args = minimist(process.argv.slice(2));
-console.log("process.argv :", process.argv);
 const format = args["f"] || "iife";
 const target = args._[0] || "reactivity";
 const IIFENameMap = {

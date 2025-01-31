@@ -93,7 +93,27 @@ function patchProp(el, key, prevValue, nextValue) {
   }
 }
 
+// packages/runtime-core/src/renderer.ts
+function createRenderer(options) {
+  return {
+    render(vdom, container) {
+    }
+  };
+}
+
+// packages/runtime-core/src/h.ts
+function h() {
+}
+
 // packages/runtime-dom/src/index.ts
 var renderOptions = { ...nodeOps, patchProp };
-console.log("renderOptions :", renderOptions);
+function render(vdom, container) {
+  const { render: render2 } = createRenderer(renderOptions);
+  render2({}, container);
+}
+export {
+  createRenderer,
+  h,
+  render
+};
 //# sourceMappingURL=runtime-dom.js.map
