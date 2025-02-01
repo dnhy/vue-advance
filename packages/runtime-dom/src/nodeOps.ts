@@ -18,7 +18,7 @@ export const nodeOps = {
     return (node.nodeValue = text);
   },
   setElementText(node, text) {
-    return (node.nodeValue = text);
+    return (node.textContent = text);
   },
   parentNode(node) {
     return node.parentNode;

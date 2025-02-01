@@ -46,3 +46,4 @@ objProxy.a = 567
 ```
 设置objProxy的a属性值，由于obj上无a属性，会进行原型链查找触发protoProxy的set，它的receiver指向objProxy，所以不会修改原型对象proto的a属性值,而是添加obj的a属性。即使不用代理，原生的属性也会按照这个逻辑进行修改。
 如果不想要在obj原始对象上添加a属性，可以修改protoProxy的set中的receiver参数指向protoProxy本身，或者不传r默认指向当前代理对象，这样就对原型对象上的属性a进行了修改。也可以进行阻断，这样就都不会对原型对象和原始对象进行属性修改。
+

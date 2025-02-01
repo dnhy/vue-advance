@@ -19,7 +19,7 @@ var nodeOps = {
     return node.nodeValue = text;
   },
   setElementText(node, text) {
-    return node.nodeValue = text;
+    return node.textContent = text;
   },
   parentNode(node) {
     return node.parentNode;
@@ -93,23 +93,130 @@ function patchProp(el, key, prevValue, nextValue) {
   }
 }
 
+// packages/shared/src/index.ts
+function isObject(val) {
+  return typeof val === "object" && val !== null;
+}
+function isString(val) {
+  return typeof val === "string";
+}
+
 // packages/runtime-core/src/renderer.ts
 function createRenderer(options) {
+  let {
+    insert: hostInsert,
+    remove: hostRemove,
+    createElement: hostCreatElement,
+    createText: hostCreateText,
+    setText: hostSetText,
+    setElementText: hostSetElementText,
+    parentNode: hostParentNode,
+    nextSibling: hostNextSibling,
+    patchProp: hostPatchProp
+  } = options;
+  function mountChildren(children, container) {
+    for (let i = 0; i < children.length; i++) {
+      patch(null, children[i], container);
+    }
+  }
+  function mountElement(vnode, container) {
+    const { type, props, shapeFlag, children } = vnode;
+    const el = vnode.el = hostCreatElement(type);
+    if (props) {
+      for (const key in props) {
+        hostPatchProp(el, key, null, props[key]);
+      }
+    }
+    if (16 /* ARRAY_CHILDREN */ & shapeFlag) {
+      mountChildren(children, el);
+    } else {
+      hostSetElementText(el, children);
+    }
+    hostInsert(el, container);
+  }
+  function patchElement(vnode, nextNode, container) {
+  }
+  function unmount(vnode) {
+    hostRemove(vnode);
+  }
+  function patch(prevNode, nextNode, container) {
+    if (prevNode == null) {
+      mountElement(nextNode, container);
+    } else {
+      patchElement(prevNode, nextNode, container);
+    }
+  }
   return {
-    render(vdom, container) {
+    render(vnode, container) {
+      if (vnode === null) {
+        unmount(vnode.el);
+      } else {
+        const prevNode = container._vnode || null;
+        const nextNode = vnode;
+        patch(prevNode, nextNode, container);
+        container._vnode = nextNode;
+      }
     }
   };
 }
 
+// packages/runtime-core/src/createVNode.ts
+function isVnode(val) {
+  return !!(val && val.__v_isVNode);
+}
+function createVNode(type, props, children) {
+  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : 0;
+  const vnode = {
+    shapeFlag,
+    __v_isVNode: true,
+    type,
+    props,
+    key: props && props.key,
+    el: null,
+    children
+  };
+  if (children) {
+    let type2 = 0;
+    if (Array.isArray(children)) {
+      type2 = 16 /* ARRAY_CHILDREN */;
+    } else {
+      type2 = 8 /* TEXT_CHILDREN */;
+    }
+    vnode.shapeFlag |= type2;
+  }
+  return vnode;
+}
+
 // packages/runtime-core/src/h.ts
-function h() {
+function h(type, propsOrChildren, children) {
+  const len = arguments.length;
+  if (len == 2) {
+    if (isObject(propsOrChildren) && !Array.isArray(propsOrChildren)) {
+      if (isVnode(propsOrChildren)) {
+        return createVNode(type, null, [propsOrChildren]);
+      } else {
+        return createVNode(type, propsOrChildren);
+      }
+    } else {
+      return createVNode(type, null, propsOrChildren);
+    }
+  } else {
+    if (len > 3) {
+      children = Array.from(arguments).slice(2);
+    } else {
+      if (len == 3 && isVnode(children)) {
+        children = [children];
+      }
+    }
+    return createVNode(type, propsOrChildren, children);
+  }
 }
 
 // packages/runtime-dom/src/index.ts
 var renderOptions = { ...nodeOps, patchProp };
 function render(vdom, container) {
   const { render: render2 } = createRenderer(renderOptions);
-  render2({}, container);
+  render2(vdom, container);
 }
 export {
   createRenderer,

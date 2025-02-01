@@ -9,8 +9,27 @@
     <div id="app"></div>
     <script type="module">
       import { h, render } from "./runtime-dom.js";
+      // import {
+      //   h,
+      //   render,
+      // } from "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js";
 
-      const vDom = h("div", "hello jw");
+      // const vDom = h("div");
+      const vDom = h(
+        "div",
+        { style: { background: "red", color: "blue" } },
+        h("span", "123"),
+        h("div", "dksdfklsdkdslsdk")
+      );
+      console.log("vDom", vDom);
+      // const vDom = h("div", "hello jw");
+      // const vDom = h("div", [h("span", "123"), h("span", "qwq")]);
+      // const vDom = h("div", { style: { color: "red" } });
+      // const vDom = h("div", {}, "hello jw");
+      // const vDom = h("div", {}, [h("span", "123"), h("span", "qwq")]);
+      // const vDom = h("div", h("span", "123"), h("span", "qwq"));
+      // const vDom = h("div", {}, h("span", "123"), h("span", "qwq"));
+
       render(vDom, app);
     </script>
   </body>
